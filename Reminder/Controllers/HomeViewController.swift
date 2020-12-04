@@ -18,6 +18,7 @@ class HomeViewController: UIViewController {
     var notificationPermission: Bool = false
     var reminderTaskVM = ReminderTaskViewModel()
     var reminderDM: [NSManagedObject] = []
+    var notification = Notification()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -69,42 +70,17 @@ class HomeViewController: UIViewController {
         vc.completion = { title, description, date in
             DispatchQueue.main.async {
                 self.navigationController?.popToRootViewController(animated: true)
-                //let new = ReminderTask(title: title, date: date, id: UUID().uuidString)
+                let new = ReminderTask(title: title, body: description, date: date, id: UUID().uuidString)
                 //self.reminderTaskVM.reminderTasks.append(new)
-                guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
-                    return
-                }
-                let managedContext = appDelegate.persistentContainer.viewContext
-                let entity = NSEntityDescription.entity(forEntityName: "Task", in: managedContext)
-                let task = NSManagedObject(entity: entity!, insertInto: managedContext)
-                task.setValue(title, forKey: "title")
-                task.setValue(date, forKey: "date")
-                task.setValue(description, forKey: "body")
-                let id = UUID().uuidString
-                task.setValue(id, forKey: "id")
-                do {
-                    try managedContext.save()
-                    self.reminderDM.append(task)
-                } catch let error as NSError {
-                    print("Saving Error: \(error)")
-                }
                 
-                self.table.reloadData()
                 
-                let center = UNUserNotificationCenter.current()
-                let content = UNMutableNotificationContent()
-                content.title = title
-                content.sound = .default
-                content.body = description
-                
-                let scheduledDate = date
-                let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: scheduledDate), repeats: false)
-                let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-                center.add(request, withCompletionHandler: { error in
-                    if error != nil {
-                        print("error: \(error)")
+                self.reminderTaskVM.addTasksToCoreData(reminderTask: new) { [weak self] reminderTasks in
+                    DispatchQueue.main.async {
+                        self?.table.reloadData()
                     }
-                })
+                }
+                
+                self.notification.addNotification(reminderTask: new)
             }
             
         }
@@ -125,48 +101,19 @@ class HomeViewController: UIViewController {
         reminderVC.completionDelete = { title, description, date, id, action in
             DispatchQueue.main.async {
                 self.navigationController?.popToRootViewController(animated: true)
-                guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
-                    return
-                }
-                let managedContext = appDelegate.persistentContainer.viewContext
-                let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "Task")
-                fetchRequest.predicate = NSPredicate(format: "id = %@", id)
-                
-                do {
-                    let data = try managedContext.fetch(fetchRequest)
-                    let task = data[0]
-                    if action == "delete" {
-                        managedContext.delete(task)
-                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
-                    } else if action == "update" {
-                        task.setValue(title, forKey: "title")
-                        task.setValue(description, forKey: "body")
-                        task.setValue(date, forKey: "date")
-                        
-                        let center = UNUserNotificationCenter.current()
-                        let content = UNMutableNotificationContent()
-                        content.title = title
-                        content.sound = .default
-                        content.body = description
-                        
-                        let scheduledDate = date
-                        let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: scheduledDate), repeats: false)
-                        let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-                        center.add(request, withCompletionHandler: { error in
-                            if error != nil {
-                                print("error: \(error)")
-                            }
-                        })
+                let new = ReminderTask(title: title, body: description, date: date, id: id)
+                if action == "delete" {
+                    self.reminderTaskVM.deleteTasksFromCoreData(reminderTask: new) { [weak self] reminderTasks in
+                        DispatchQueue.main.async {
+                            self?.getData()
+                        }
                     }
-                    do {
-                        try managedContext.save()
-                    } catch {
-                        print(error)
+                } else if action == "update" {
+                    self.reminderTaskVM.updateTasksToCoreData(reminderTask: new) { [weak self] reminderTasks in
+                        DispatchQueue.main.async {
+                            self?.getData()                        }
                     }
-                } catch let error as NSError {
-                    print("Saving Error: \(error)")
                 }
-                self.getData()
             }
         }
     }

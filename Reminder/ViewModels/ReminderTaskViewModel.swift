@@ -54,7 +54,75 @@ extension ReminderTaskViewModel {
         }
     }
     
-    func addTasksToCoreData(completion: @escaping (Result<[ReminderTask], Error>) -> Void) {
+    func addTasksToCoreData(reminderTask: ReminderTask, completion: @escaping (Result<ReminderTask, Error>) -> Void) {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            return
+        }
+        let managedContext = appDelegate.persistentContainer.viewContext
+        let entity = NSEntityDescription.entity(forEntityName: "Task", in: managedContext)
+        let task = NSManagedObject(entity: entity!, insertInto: managedContext)
+        task.setValue(reminderTask.title, forKey: "title")
+        task.setValue(reminderTask.date, forKey: "date")
+        task.setValue(reminderTask.body, forKey: "body")
+        task.setValue(reminderTask.id, forKey: "id")
+        do {
+            try managedContext.save()
+            reminderDM.append(task)
+            reminderTasks.append(reminderTask)
+            completion(.success(reminderTask))
+        } catch let error as NSError {
+            print("Saving Error: \(error)")
+        }
+    }
+    
+    func deleteTasksFromCoreData(reminderTask: ReminderTask, completion: @escaping (Result<[ReminderTask], Error>) -> Void) {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            return
+        }
+        let managedContext = appDelegate.persistentContainer.viewContext
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "Task")
+        fetchRequest.predicate = NSPredicate(format: "id = %@", reminderTask.id)
         
+        do {
+            let data = try managedContext.fetch(fetchRequest)
+            let task = data[0]
+            managedContext.delete(task)
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [reminderTask.id])
+            do {
+                try managedContext.save()
+            } catch {
+                print(error)
+            }
+        } catch let error as NSError {
+            print("Saving Error: \(error)")
+        }
+    }
+    
+    func updateTasksToCoreData(reminderTask: ReminderTask, completion: @escaping (Result<[ReminderTask], Error>) -> Void) {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            return
+        }
+        let managedContext = appDelegate.persistentContainer.viewContext
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "Task")
+        fetchRequest.predicate = NSPredicate(format: "id = %@", reminderTask.id)
+        
+        do {
+            let data = try managedContext.fetch(fetchRequest)
+            let task = data[0]
+            
+            task.setValue(reminderTask.title, forKey: "title")
+            task.setValue(reminderTask.body, forKey: "body")
+            task.setValue(reminderTask.date, forKey: "date")
+                
+            Notification().addNotification(reminderTask: reminderTask)
+            
+            do {
+                try managedContext.save()
+            } catch {
+                print(error)
+            }
+        } catch let error as NSError {
+            print("Saving Error: \(error)")
+        }
     }
 }

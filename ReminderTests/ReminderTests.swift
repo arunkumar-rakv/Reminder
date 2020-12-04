@@ -10,7 +10,9 @@ import XCTest
 @testable import Reminder
 
 class ReminderTests: XCTestCase {
-
+    
+    var reminderTaskVM = ReminderTaskViewModel()
+    
     override func setUp() {
         // Put setup code here. This method is called before the invocation of each test method in the class.
     }
@@ -19,9 +21,15 @@ class ReminderTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-    func testExample() {
+    func testAdd() {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct results.
+        let newTask = ReminderTask(title: "New", body: "New Body", date: Date(), id: UUID().uuidString)
+        reminderTaskVM.addTasksToCoreData(reminderTask: newTask) { reminderTask in
+            XCTAssertNotNil(reminderTask)
+            XCTAssertTrue(try! reminderTask.get().title == "New")
+        }
+        
     }
 
     func testPerformanceExample() {
