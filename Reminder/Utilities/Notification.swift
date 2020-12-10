@@ -18,14 +18,17 @@ class Notification {
         content.title = reminderTask.title
         content.sound = .default
         content.body = reminderTask.body
-        
+        content.badge = 1
+        content.userInfo = ["id": reminderTask.id, "title": reminderTask.title,
+                            "body": reminderTask.body, "date": reminderTask.date]
         let scheduledDate = reminderTask.date
         let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: scheduledDate), repeats: false)
         let request = UNNotificationRequest(identifier: reminderTask.id, content: content, trigger: trigger)
         center.add(request, withCompletionHandler: { error in
             if error != nil {
-                print("error: \(error)")
+                print("error: \(error?.localizedDescription ?? "Failed to add notification")")
             }
         })
     }
+    
 }

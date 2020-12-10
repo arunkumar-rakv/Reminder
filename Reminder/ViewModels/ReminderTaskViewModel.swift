@@ -24,14 +24,6 @@ class ReminderTaskViewModel {
 
 extension ReminderTaskViewModel {
     
-    func fetchReminderTasks(completion: @escaping (Result<[ReminderTask], Error>) -> Void) {
-        completion(.success(reminderTasks))
-    }
-    
-    func addReminderTask(completion: @escaping (Result<[ReminderTask], Error>) -> Void) {
-        completion(.success(reminderTasks))
-    }
-    
     func fetchTasksFromCoreData(completion: @escaping (Result<[ReminderTask], Error>) -> Void) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
         let managedContext = appDelegate.persistentContainer.viewContext
@@ -42,10 +34,6 @@ extension ReminderTaskViewModel {
             reminderTasks = []
             for task in reminderDM {
                 let reminderTask = ReminderTask(title: (task.value(forKey: "title") as? String)!, body: (task.value(forKey: "body") as? String)!, date: (task.value(forKey: "date") as? Date)!, id: (task.value(forKey: "id") as? String)!)
-//            reminderTask.title = task.value(forKey: "title") as? String
-//            reminderTask.body = task.value(forKey: "body") as? String
-//            reminderTask.date = task.value(forKey: "date") as? Date
-//            reminderTask.id = task.value(forKey: "id") as? String
                 reminderTasks.append(reminderTask)
             }
             completion(.success(reminderTasks))
